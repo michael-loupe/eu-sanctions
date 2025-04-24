@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d7598f1-4d9d-4d7e-82a4-1a454b036838" name="Changes" comment="Refactoring table + links" />
+    <list default="true" id="6d7598f1-4d9d-4d7e-82a4-1a454b036838" name="Changes" comment="Refactoring table + links">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eu-sanctions/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/eu-sanctions/requirements.txt" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -317,7 +320,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745478741182</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="Refactoring table + links">
+      <option name="closed" value="true" />
+      <created>1745479132646</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1745479132646</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
