@@ -5,6 +5,9 @@ import xml.etree.ElementTree as ET
 from io import BytesIO
 import feedparser
 
+# Drittanbieter-Komponente für interaktive Tabellen
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+
 # --- Konfiguration ---
 RSS_FEED_URL = "https://webgate.ec.europa.eu/fsd/fsf/public/rss"
 CACHE_TTL_SECONDS = 7 * 24 * 3600  # 7 Tage
@@ -16,10 +19,6 @@ session = requests.Session()
 # --- XML Download mit TTL-Caching ---
 @st.cache_data(ttl=CACHE_TTL_SECONDS)
 def fetch_xml(feed_url: str) -> bytes:
-    """
-    Lädt die XML-Datei aus dem RSS-Feed unter Verwendung einer Session.
-    Wird über TTL automatisch neu geladen, wenn abgelaufen.
-    """
     feed = feedparser.parse(feed_url)
     xml_url = None
     for entry in feed.entries:
@@ -47,36 +46,23 @@ def lade_sanktionen(xml_content: bytes) -> pd.DataFrame:
     sanktionen = []
 
     for entity in root.findall(".//ns:sanctionEntity", ns):
-        # EU Reference Number direkt vom Element-Attribut
         eu_ref = entity.get("euReferenceNumber", "Unbekannt")
-        # Name
         name_alias = entity.find("ns:nameAlias", ns)
         name = name_alias.get("wholeName", "Unbekannt") if name_alias is not None else "Unbekannt"
-        # Typ (Person oder Entity)
-        stype = entity.find("ns:subjectType", ns)
-        code = stype.get("code", "Unbekannt") if stype is not None else "Unbekannt"
-        subject_type = "Person" if code.lower() == "person" else "Entity" if code.lower() == "enterprise" else code.title()
-        # Regulation node for publication
+        stype_elem = entity.find("ns:subjectType", ns)
+        code = stype_elem.get("code", "Unbekannt") if stype_elem is not None else "Unbekannt"
+        subject_type = "Person" if code.lower() == "person" else "Entity" if code.lower() in ["enterprise", "entity"] else code
         reg = entity.find("ns:regulation", ns)
         pub_date = reg.get("publicationDate", "") if reg is not None else ""
-        # Programm
         programme = reg.get("programme", "Unbekannt") if reg is not None else "Unbekannt"
-        # Bemerkung
-        remarks = name_alias.findtext("ns:remark", default="", namespaces=ns) if name_alias is not None else ""
-        # Publikations-URL
         pub_url = ""
         if reg is not None:
             url_elem = reg.find("ns:publicationUrl", ns)
             if url_elem is not None and url_elem.text:
                 pub_url = url_elem.text.strip()
-
-        # Land
-        country = "Unbekannt"
+        remarks = name_alias.findtext("ns:remark", default="", namespaces=ns) if name_alias is not None else ""
         addr = entity.find("ns:address", ns)
-        if addr is not None:
-            desc = addr.get("countryDescription", "").strip()
-            if desc:
-                country = desc.title()
+        country = addr.get("countryDescription", "Unbekannt").title() if addr is not None else "Unbekannt"
 
         sanktionen.append({
             'EU-Referenznummer': eu_ref,
@@ -89,105 +75,81 @@ def lade_sanktionen(xml_content: bytes) -> pd.DataFrame:
             'Publikations-URL': pub_url
         })
 
-    df = pd.DataFrame(sanktionen)
-    df['Land'] = df['Land'].fillna('Unbekannt')
-    return df
+    return pd.DataFrame(sanktionen)
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="EU-Sanktionen", layout="wide")
 st.title("🇪🇺 EU-Sanktionen Explorer")
 st.markdown("Filtere nach Land und Typ – Ergebnisanzeige unten.")
 
-# Daten laden
 with st.spinner("🔄 Lade XML-Daten..."):
     try:
         xml_bytes = fetch_xml(RSS_FEED_URL)
     except RuntimeError as e:
-        st.error(str(e)); st.stop()
+        st.error(str(e))
+        st.stop()
     df = lade_sanktionen(xml_bytes)
 
 if df.empty:
-    st.error("❌ Keine Daten geladen."); st.stop()
+    st.error("❌ Keine Daten geladen.")
+    st.stop()
 
-# Übersicht: Gesamt und nach Typ
 st.subheader("📊 Übersicht")
-col_t, col_tot = st.columns([3,1])
+col1, col2 = st.columns([3,1])
 for t, cnt in df['Typ'].value_counts().items():
-    label = t
-    formatted = f"{cnt:,}".replace(",", ".")
-    col_t.metric(label=label, value=formatted)
-total = len(df)
-col_tot.metric(label="Gesamt Einträge", value=f"{total:,}".replace(",", "."))
+    col1.metric(label=t, value=f"{cnt:,}".replace(",", "."))
+col2.metric(label="Gesamt Einträge", value=f"{len(df):,}".replace(",", "."))
 
-# Session-State Defaults
-if "land_filter" not in st.session_state:
-    st.session_state["land_filter"] = []
-if "typ_filter" not in st.session_state:
-    st.session_state["typ_filter"] = "Alle"
+st.sidebar.header("Filter")
+land = st.sidebar.multiselect("🌍 Länder", options=sorted(df['Land'].unique()))
+typ_options = df['Typ'].unique() if not land else df[df['Land'].isin(land)]['Typ'].unique()
+typ = st.sidebar.selectbox("👤 Typ", options=["Alle"] + sorted(typ_options))
+search = st.sidebar.text_input("🔍 Suche Name (ab 3 Zeichen)")
 
-# Reset-Button
-if st.button("Filter zurücksetzen"):
-    st.session_state["land_filter"] = []
-    st.session_state["typ_filter"] = "Alle"
-
-# Filter-Widgets
-col1, col2 = st.columns(2)
-with col1:
-    land_selection = st.multiselect(
-        "🌍 Länder auswählen",
-        options=sorted(df['Land'].unique()),
-        key="land_filter"
-    )
-
-# Flag für Hinweis auf fehlenden Typ
-warning_msg = None
-with col2:
-    # Alle verfügbaren Typen ermitteln (abhängig von Länder-Filter)
-    types = sorted(
-        (df if not st.session_state['land_filter']
-         else df[df['Land'].isin(st.session_state['land_filter'])]
-        )['Typ'].unique()
-    )
-    options = ["Alle"] + types
-    selected = st.session_state.get("typ_filter", "Alle")
-    if selected not in options:
-        warning_msg = f"Keine «{selected}» im gewählten Land verfügbar."
-        selected = "Alle"
-        st.session_state["typ_filter"] = "Alle"
-    index = options.index(selected)
-    st.selectbox(
-        "👤 Typ auswählen",
-        options=options,
-        index=index,
-        key="typ_filter"
-    )
-
-# Anwenden der Filter und Volltextsuche
 filtered = df.copy()
-if st.session_state["land_filter"]:
-    filtered = filtered[filtered['Land'].isin(st.session_state['land_filter'])]
-if st.session_state["typ_filter"] != "Alle":
-    filtered = filtered[filtered['Typ'] == st.session_state['typ_filter']]
-
-search = st.text_input("🔍 Suche Name (ab 3 Zeichen)", key="search_term")
-if len(search) >= 3:
+if land:
+    filtered = filtered[filtered['Land'].isin(land)]
+if typ != "Alle":
+    filtered = filtered[filtered['Typ'] == typ]
+if 0 < len(search) < 3:
+    st.sidebar.info("Bitte mindestens 3 Zeichen eingeben.")
+elif len(search) >= 3:
     filtered = filtered[filtered['Name'].str.contains(search, case=False, na=False)]
-elif 0 < len(search) < 3:
-    st.info("Bitte mindestens 3 Zeichen eingeben.")
 
-# Anzeige der Ergebnisse
-# Warnung direkt über der Tabelle
-if warning_msg:
-    st.warning(warning_msg)
+# angepasster Link-Renderer mit schönem Text
+link_renderer = JsCode(
+    """
+    class LinkRenderer {
+        init(params) {
+            const link = document.createElement('a');
+            link.href = params.value;
+            link.target = '_blank';
+            link.textContent = '🔗 Öffnen';
+            this.eGui = link;
+        }
+        getGui() { return this.eGui; }
+    }
+    """
+)
 
-st.markdown(f"### 📄 Gefundene Einträge: {len(filtered):,}".replace(",", "."))
-# Nummerierung ab 1
-filtered = filtered.reset_index(drop=True)
-filtered.index = filtered.index + 1
-filtered.index.name = "Nr"
-# Tabelle anzeigen
-st.dataframe(filtered, use_container_width=True)
+gb = GridOptionsBuilder.from_dataframe(filtered)
+# Standard Spaltenkonfiguration
+gb.configure_default_column(resizable=True, sortable=True, filter=True)
+# Publikations-URL mit unserem Link-Renderer
+gb.configure_column('Publikations-URL', cellRenderer=link_renderer, autoHeight=True)
+# Grid-Optionen final bauen
+grid_options = gb.build()
 
-# CSV-Export
-csv = filtered.to_csv(index=False).encode("utf-8")
-st.download_button("⬇️ Tabelle als CSV herunterladen", csv, "eu_sanktionen.csv", "text/csv")
+
+AgGrid(
+    filtered,
+    gridOptions=grid_options,
+    enable_enterprise_modules=False,
+    theme='streamlit',
+    height=400,
+    fit_columns_on_grid_load=True,
+    allow_unsafe_jscode=True
+)
+
+csv = filtered.to_csv(index=False).encode('utf-8')
+st.download_button("⬇️ CSV herunterladen", csv, "eu_sanktionen.csv", "text/csv")
