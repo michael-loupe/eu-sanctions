@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d7598f1-4d9d-4d7e-82a4-1a454b036838" name="Changes" comment="Initial commit" />
+    <list default="true" id="6d7598f1-4d9d-4d7e-82a4-1a454b036838" name="Changes" comment="Initial commit">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eu-sanctions/sanctions.py" beforeDir="false" afterPath="$PROJECT_DIR$/eu-sanctions/sanctions.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -24,12 +27,12 @@
     &quot;assignee&quot;: &quot;michael-loupe&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/michael-loupe/eu-sanctions.git",
-    "accountId": "4c65fd0c-dbd6-4d12-98dc-d1f8fa95a24d"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/michael-loupe/eu-sanctions.git&quot;,
+    &quot;accountId&quot;: &quot;4c65fd0c-dbd6-4d12-98dc-d1f8fa95a24d&quot;
   }
-}]]></component>
+}</component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/sharepoint/sync.py" root0="SKIP_INSPECTION" />
   </component>
@@ -50,7 +53,7 @@
     &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;Python.main.executor&quot;: &quot;Run&quot;,
     &quot;Python.sanctions.executor&quot;: &quot;Run&quot;,
-    &quot;Python.sync.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.sync.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,

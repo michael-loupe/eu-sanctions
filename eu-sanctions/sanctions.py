@@ -47,6 +47,8 @@ def lade_sanktionen(xml_content: bytes) -> pd.DataFrame:
     sanktionen = []
 
     for entity in root.findall(".//ns:sanctionEntity", ns):
+        # EU Reference Number direkt vom Element-Attribut
+        eu_ref = entity.get("euReferenceNumber", "Unbekannt")
         # Name
         name_alias = entity.find("ns:nameAlias", ns)
         name = name_alias.get("wholeName", "Unbekannt") if name_alias is not None else "Unbekannt"
@@ -77,6 +79,7 @@ def lade_sanktionen(xml_content: bytes) -> pd.DataFrame:
                 country = desc.title()
 
         sanktionen.append({
+            'EU-Referenznummer': eu_ref,
             'Name': name,
             'Typ': subject_type,
             'Land': country,
