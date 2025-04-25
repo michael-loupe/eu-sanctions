@@ -113,15 +113,21 @@ subset = filtered.iloc[start:end]
 
 st.subheader(f"Gefundene Einträge: {total} (Seite {page} von {pages})")
 
-# Darstellung native Streamlit-Tabelle mit Index ab 1
+# Darstellung native Streamlit-Tabelle mit klickbaren Links
 if not subset.empty:
     disp = subset.copy()
     # Nummerierung ab 1
     disp = disp.reset_index(drop=True)
     disp.index = disp.index + 1
-    # Rückgabe der URL als reiner Text (kein 🔗 Öffnen)
-    disp['Publikations-URL'] = disp['Publikations-URL']
-    st.dataframe(disp, use_container_width=True)
+
+    # Mit LinkColumn wird die URL-Spalte klickbar
+    st.dataframe(
+        disp,
+        use_container_width=True,
+        column_config={
+            "Publikations-URL": st.column_config.LinkColumn()
+        }
+    )
 
 # CSV-Download
 to_download = filtered.to_csv(index=False).encode('utf-8')
